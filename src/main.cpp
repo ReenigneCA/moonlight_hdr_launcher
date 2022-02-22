@@ -12,6 +12,7 @@
 #include <optional>
 #include "windows.h"
 
+
 #include "WinReg.hpp"
 #include "hdr_toggle.hpp"
 
@@ -29,6 +30,23 @@ namespace fs = std::filesystem;
 namespace pt = boost::property_tree;
 
 const static std::string default_launcher = "C:/Program Files (x86)/GOG Galaxy/GalaxyClient.exe";
+
+
+void set_resolution(uint16_t width, uint16_t height, uint16_t refresh_rate) {
+    DEVMODE devmode{};
+    devmode.dmSize = sizeof(devmode);
+    devmode.dmPelsWidth = width;
+    devmode.dmPelsHeight = height;
+    devmode.dmFields = DM_PELSHEIGHT | DM_PELSWIDTH;
+    if (refresh_rate != 0) {
+        devmode.dmDisplayFrequency = refresh_rate;
+        devmode.dmFields |= DM_DISPLAYFREQUENCY;
+    }
+    auto result = ChangeDisplaySettings(&devmode, 0);
+    if (result == DISP_CHANGE_SUCCESSFUL) {
+        ;
+    }
+}
 
 void log(const std::string &message, std::ofstream &file, bool log_to_stdout = true)
 {
@@ -64,6 +82,33 @@ std::optional<fs::path> get_destination_folder_path()
   }
 }
 
+LRESULT CALLBACK    WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message)
+    {
+    case WM_COMMAND:
+    {
+        int wmId = LOWORD(wParam);
+        // Parse the menu selections:
+        switch (wmId)
+        {
+        case 105: //IDM_EXIT
+            DestroyWindow(hWnd);
+            break;
+        default:
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        }
+    }
+    break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+};
+
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow)
 {
   auto argc = __argc;
@@ -71,7 +116,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine,
 
   auto pwd = fs::path(argv[0]).parent_path();
   auto reg_dest_path = get_destination_folder_path();
-
+  
   if (reg_dest_path)
   {
     pwd = *reg_dest_path;
@@ -122,6 +167,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine,
     std::string launcher_exe = default_launcher;
     bool wait_on_process = true;
     bool toggle_hdr = false;
+    uint16_t resX = 0;
+    uint16_t resY = 0;
+    uint16_t refresh_rate = 0;
 
     if (fs::exists(inifile))
     {
@@ -134,6 +182,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine,
       launcher_exe = ini.get_optional<std::string>("options.launcher_exe").get_value_or(default_launcher);
       wait_on_process = ini.get_optional<bool>("options.wait_on_process").get_value_or(wait_on_process);
       toggle_hdr = ini.get_optional<bool>("options.toggle_hdr").get_value_or(toggle_hdr);
+      resX = ini.get_optional<uint16_t>("options.resX").get_value_or(resX);
+      resY = ini.get_optional<uint16_t>("options.resY").get_value_or(resY);
+      refresh_rate = ini.get_optional<uint16_t>("options.refresh_rate").get_value_or(refresh_rate);
 
       log(std::string("options.launcher_exe=") + launcher_exe, logfile);
       log(std::string("options.wait_on_process=") + std::to_string(wait_on_process), logfile);
@@ -145,9 +196,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine,
       sentry_add_breadcrumb(le_c);      
 #endif
     }
-
+    if (resX != 0 && resY != 0) {
+        set_resolution(resX, resY, refresh_rate);
+    }
+    
     if (wait_on_process)
     {
+      WNDCLASS wc = {};
+      wc.lpfnWndProc = WndProc;
+      wc.hInstance = hInstance;
+      wc.lpszClassName = L"DummyWindow";
+      RegisterClass(&wc);
+      auto launcher_window = CreateWindowW(L"DummyWindow", L"MoonLight HDR Launcher Do Not Close", WS_OVERLAPPEDWINDOW,
+                                           0, 0, 1, 1, nullptr, nullptr, hInstance, nullptr);
+      if(launcher_window)
+          ShowWindow(launcher_window, nCmdShow);
+
       std::optional<HdrToggle> hdr_toggle;
       if (toggle_hdr)
       {
@@ -215,6 +279,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine,
           log(std::string("Failed to disable HDR mode: ") + e.what(), logfile);
         }
       }
+      if(launcher_window)
+        DestroyWindow(launcher_window);
+
     }
     else
     {
@@ -241,6 +308,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine,
 #ifdef SENTRY_DEBUG
   sentry_shutdown();
 #endif
+
+  
 
   return retcode;
 }
