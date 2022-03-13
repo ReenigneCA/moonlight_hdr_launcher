@@ -18,9 +18,9 @@ public:
 
   HdrToggle();
   virtual ~HdrToggle();
-  bool set_hdr_mode(bool enabled);
+  bool set_hdr_mode(bool enabled, uint8_t bpc);
 private:
-  NV_HDR_COLOR_DATA set_hdr_data(bool enabled);
+  NV_HDR_COLOR_DATA set_hdr_data(bool enabled,uint8_t bpc);
   std::vector<NV_GPU_DISPLAYIDS> get_hdr_display_ids();
   void calc_mastering_data(NV_HDR_COLOR_DATA *hdr_data);
 };

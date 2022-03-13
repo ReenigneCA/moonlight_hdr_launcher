@@ -72,7 +72,7 @@ void HdrToggle::calc_mastering_data(NV_HDR_COLOR_DATA *hdr_data)
   hdr_data->mastering_display_data.min_display_mastering_luminance = (NvU16)ceil(min_master * 10000.0 + 0.5);
 }
 
-NV_HDR_COLOR_DATA HdrToggle::set_hdr_data(bool enabled)
+NV_HDR_COLOR_DATA HdrToggle::set_hdr_data(bool enabled,uint8_t bpc)
 {
   NV_HDR_COLOR_DATA color = {0};
 
@@ -82,7 +82,27 @@ NV_HDR_COLOR_DATA HdrToggle::set_hdr_data(bool enabled)
   if (enabled)
   {
     color.hdrColorFormat = NV_COLOR_FORMAT_RGB;
-    color.hdrBpc = NV_BPC_8;
+    switch (bpc) {
+    case 16:
+        color.hdrBpc = NV_BPC_16;
+        break;
+    case 12:
+        color.hdrBpc = NV_BPC_12;
+        break;
+    case 10:
+        color.hdrBpc = NV_BPC_10;
+        break;
+    case 6:
+        color.hdrBpc = NV_BPC_6;
+        break;
+    case 8:
+        color.hdrBpc = NV_BPC_8;
+        break;
+    default:
+    case 0:
+        color.hdrBpc = NV_BPC_DEFAULT;
+    }
+    
   }
 
   color.hdrDynamicRange = NV_DYNAMIC_RANGE_AUTO;
@@ -93,19 +113,19 @@ NV_HDR_COLOR_DATA HdrToggle::set_hdr_data(bool enabled)
   return color;
 }
 
-bool HdrToggle::set_hdr_mode(bool enabled)
+bool HdrToggle::set_hdr_mode(bool enabled,uint8_t bpc)
 {
   auto disp_ids_hdr = get_hdr_display_ids();
 
   std::vector<bool> statuses;
   for (const auto &disp_id : disp_ids_hdr)
   {
-    auto color = set_hdr_data(enabled);
+    auto color = set_hdr_data(enabled, bpc);
     auto status = check_status_nothrow(NvAPI_Disp_HdrColorControl(disp_id.displayId, &color));
     statuses.push_back(status);
   }
 
-  if (std::any_of(std::begin(statuses), std::end(statuses), [](auto &s) { return s; }))
+  if (std::any_of(std::begin(statuses), std::end(statuses), [](auto s) { return s; }))
   {
     return true;
   }
