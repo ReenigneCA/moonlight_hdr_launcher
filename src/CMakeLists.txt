@@ -1,6 +1,6 @@
 find_package(Boost REQUIRED filesystem)
 
-set(NVAPI_DL_PATH "${CMAKE_SOURCE_DIR}/R460-developer.zip" CACHE PATH "Path to the NVAPI zip file")
+set(NVAPI_DL_PATH "${CMAKE_SOURCE_DIR}/R510-developer.zip" CACHE PATH "Path to the NVAPI zip file")
 option(SENTRY_DEBUG "Use https://sentry.io to report crashes" OFF)
 
 include(FetchContent)
@@ -45,7 +45,7 @@ target_compile_definitions(MassEffectAndromeda PRIVATE -D_WIN32_WINNT=0x0601 -DU
 target_compile_options(MassEffectAndromeda PRIVATE /EHscr)
 target_compile_features(MassEffectAndromeda PRIVATE cxx_std_17)
 target_link_libraries(MassEffectAndromeda PRIVATE Boost::headers Boost::filesystem nvapi ${SENTRY_LIBRARIES})
-set_target_properties(MassEffectAndromeda PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/dist)
-set_target_properties(MassEffectAndromeda PROPERTIES RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_SOURCE_DIR}/dist)
-set_target_properties(MassEffectAndromeda PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_SOURCE_DIR}/dist)
-set_target_properties(MassEffectAndromeda PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/dist)
+set_target_properties(MassEffectAndromeda PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/dist_rel)
+set_target_properties(MassEffectAndromeda PROPERTIES RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_SOURCE_DIR}/dist_minrel)
+set_target_properties(MassEffectAndromeda PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_SOURCE_DIR}/dist_minreldebug)
+set_target_properties(MassEffectAndromeda PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/dist_debug)
